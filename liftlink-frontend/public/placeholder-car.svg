@@ -1,0 +1,9 @@
+<svg width="500" height="400" viewBox="0 0 500 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="500" height="400" fill="#F5F5F5"/>
+  <path d="M100 250H400V300H100V250Z" fill="#CCCCCC"/>
+  <path d="M125 200H375V250H125V200Z" fill="#DDDDDD"/>
+  <path d="M150 150H350V200H150V150Z" fill="#EEEEEE"/>
+  <circle cx="150" cy="300" r="30" fill="#333333"/>
+  <circle cx="350" cy="300" r="30" fill="#333333"/>
+  <rect x="200" y="175" width="100" height="50" fill="#FFFFFF"/>
+</svg>
