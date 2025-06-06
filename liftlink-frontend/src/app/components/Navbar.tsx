@@ -15,7 +15,14 @@ import {
   PopoverContent,
   useColorModeValue,
   useBreakpointValue,
-  useDisclosure
+  useDisclosure,
+  Menu,
+  MenuButton,
+  MenuList,
+  MenuItem,
+  MenuDivider,
+  Avatar,
+  HStack,
 } from '@chakra-ui/react';
 import {
   HamburgerIcon,
@@ -23,11 +30,21 @@ import {
   ChevronDownIcon,
   ChevronRightIcon
 } from '@chakra-ui/icons';
-import { FaUser } from 'react-icons/fa';
+import { FaUser, FaSignOutAlt } from 'react-icons/fa';
 import NextLink from 'next/link';
+import { useAuthStore } from '@/store/authStore';
 
 export default function Navbar() {
   const { isOpen, onToggle } = useDisclosure();
+  const { user, profile, signOut } = useAuthStore();
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+    } catch (error) {
+      console.error('Sign out error:', error);
+    }
+  };
 
   return (
     <Box>
@@ -61,7 +78,7 @@ export default function Navbar() {
             color={useColorModeValue('brand.500', 'white')}
             fontWeight="bold"
             fontSize="xl">
-            <NextLink href="/" passHref>
+            <NextLink href={user ? "/dashboard" : "/"} passHref>
               LiftLink
             </NextLink>
           </Text>
@@ -76,36 +93,61 @@ export default function Navbar() {
           justify={'flex-end'}
           direction={'row'}
           spacing={6}>
-          <Button
-            as={NextLink}
-            fontSize={'sm'}
-            fontWeight={400}
-            variant={'link'}
-            href={'/login'}>
-            Sign In
-          </Button>
-          <Button
-            as={NextLink}
-            display={{ base: 'none', md: 'inline-flex' }}
-            fontSize={'sm'}
-            fontWeight={600}
-            color={'white'}
-            bg={'brand.500'}
-            href={'/register'}
-            _hover={{
-              bg: 'brand.400',
-            }}>
-            Sign Up
-          </Button>
-          <Button
-            as={NextLink}
-            fontSize={'sm'}
-            fontWeight={400}
-            variant={'ghost'}
-            href={'/profile'}
-            leftIcon={<Icon as={FaUser} />}>
-            Profile
-          </Button>
+          {user && profile ? (
+            <Menu>
+              <MenuButton as={Button} variant="ghost" cursor="pointer">
+                <HStack>
+                  <Avatar 
+                    size="sm" 
+                    name={`${profile.first_name} ${profile.last_name}`}
+                  />
+                  <Text display={{ base: 'none', md: 'block' }}>
+                    {profile.first_name}
+                  </Text>
+                  <ChevronDownIcon />
+                </HStack>
+              </MenuButton>
+              <MenuList>
+                <MenuItem as={NextLink} href="/dashboard" icon={<FaUser />}>
+                  Dashboard
+                </MenuItem>
+                <MenuItem as={NextLink} href="/profile" icon={<FaUser />}>
+                  Profile
+                </MenuItem>
+                <MenuItem as={NextLink} href="/my-rides">
+                  My Rides
+                </MenuItem>
+                <MenuDivider />
+                <MenuItem icon={<FaSignOutAlt />} onClick={handleSignOut}>
+                  Sign Out
+                </MenuItem>
+              </MenuList>
+            </Menu>
+          ) : (
+            <>
+              <Button
+                as={NextLink}
+                fontSize={'sm'}
+                fontWeight={400}
+                variant={'link'}
+                href={'/login'}>
+                Sign In
+              </Button>
+              <Button
+                as={NextLink}
+                display={{ base: 'none', md: 'inline-flex' }}
+                fontSize={'sm'}
+                fontWeight={600}
+                color={'white'}
+                bg={'brand.500'}
+                href={'/register'}
+                _hover={{
+                  bg: 'brand.400',
+                }}>
+                Sign Up
+              </Button>
+            </>
+          )}
         </Stack>
       </Flex>
 
@@ -120,10 +162,13 @@ const DesktopNav = () => {
   const linkColor = useColorModeValue('gray.600', 'gray.200');
   const linkHoverColor = useColorModeValue('brand.500', 'white');
   const popoverContentBgColor = useColorModeValue('white', 'gray.800');
+  const { user } = useAuthStore();
+
+  const navItems = user ? AUTHENTICATED_NAV_ITEMS : PUBLIC_NAV_ITEMS;
 
   return (
     <Stack direction={'row'} spacing={4}>
-      {NAV_ITEMS.map((navItem) => (
+      {navItems.map((navItem) => (
         <Box key={navItem.label}>
           <Popover trigger={'hover'} placement={'bottom-start'}>
             <PopoverTrigger>
@@ -200,12 +245,15 @@ const DesktopSubNav = ({ label, href, subLabel }: NavItem) => {
 };
 
 const MobileNav = () => {
+  const { user } = useAuthStore();
+  const navItems = user ? AUTHENTICATED_NAV_ITEMS : PUBLIC_NAV_ITEMS;
+
   return (
     <Stack
       bg={useColorModeValue('white', 'gray.800')}
       p={4}
       display={{ md: 'none' }}>
-      {NAV_ITEMS.map((navItem) => (
+      {navItems.map((navItem) => (
         <MobileNavItem key={navItem.label} {...navItem} />
       ))}
     </Stack>
@@ -269,7 +317,18 @@ interface NavItem {
   href?: string;
 }
 
-const NAV_ITEMS: Array<NavItem> = [
+const PUBLIC_NAV_ITEMS: Array<NavItem> = [
+  {
+    label: 'How It Works',
+    href: '/how-it-works',
+  },
+  {
+    label: 'About Us',
+    href: '/about',
+  },
+];
+
+const AUTHENTICATED_NAV_ITEMS: Array<NavItem> = [
   {
     label: 'Find a Ride',
     href: '/find-ride',
@@ -281,13 +340,5 @@ const NAV_ITEMS: Array<NavItem> = [
   {
     label: 'My Rides',
     href: '/my-rides',
-  },
-  {
-    label: 'How It Works',
-    href: '/how-it-works',
-  },
-  {
-    label: 'About Us',
-    href: '/about',
   },
 ];

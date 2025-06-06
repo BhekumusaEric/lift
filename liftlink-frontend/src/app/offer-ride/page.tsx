@@ -22,13 +22,10 @@ import {
   Switch,
   InputGroup,
   InputLeftElement,
-  InputRightElement,
   InputRightAddon,
   Card,
   CardBody,
   CardHeader,
-  CardFooter,
-  Divider,
   Flex,
   Step,
   StepDescription,
@@ -45,27 +42,30 @@ import {
   AlertTitle,
   AlertDescription,
 } from '@chakra-ui/react'
-import { FaMapMarkerAlt, FaCalendarAlt, FaClock, FaUser, FaMoneyBillWave, FaInfoCircle } from 'react-icons/fa'
+import { FaMapMarkerAlt, FaCalendarAlt, FaClock, FaUser, FaMoneyBillWave } from 'react-icons/fa'
 import { useForm } from 'react-hook-form'
 import { yupResolver } from '@hookform/resolvers/yup'
 import * as yup from 'yup'
+import { useRouter } from 'next/navigation'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
+import AuthGuard from '@/components/AuthGuard'
+import { useRidesStore } from '@/store/ridesStore'
 
 // Form validation schema
 const schema = yup.object({
-  departureLocation: yup.string().required('Departure location is required'),
+  departure_location: yup.string().required('Departure location is required'),
   destination: yup.string().required('Destination is required'),
-  departureDate: yup.string().required('Departure date is required'),
-  departureTime: yup.string().required('Departure time is required'),
-  availableSeats: yup.number()
+  departure_date: yup.string().required('Departure date is required'),
+  departure_time: yup.string().required('Departure time is required'),
+  available_seats: yup.number()
     .required('Number of seats is required')
     .min(1, 'At least 1 seat must be available')
     .max(8, 'Maximum 8 seats allowed'),
-  pricePerSeat: yup.number()
+  price_per_seat: yup.number()
     .required('Price per seat is required')
     .min(0, 'Price cannot be negative'),
-  isFlexiblePrice: yup.boolean(),
+  is_flexible_price: yup.boolean(),
   description: yup.string(),
 }).required()
 
@@ -79,11 +79,14 @@ const steps = [
 ]
 
 export default function OfferRidePage() {
-  const toast = useToast()
   const { activeStep, setActiveStep } = useSteps({
     index: 0,
     count: steps.length,
   })
+  
+  const { createRide } = useRidesStore()
+  const router = useRouter()
+  const toast = useToast()
   
   const {
     register,
@@ -93,9 +96,9 @@ export default function OfferRidePage() {
   } = useForm<OfferRideFormData>({
     resolver: yupResolver(schema),
     defaultValues: {
-      availableSeats: 1,
-      pricePerSeat: 50,
-      isFlexiblePrice: true,
+      available_seats: 1,
+      price_per_seat: 50,
+      is_flexible_price: true,
     }
   })
 
@@ -104,11 +107,18 @@ export default function OfferRidePage() {
 
   const onSubmit = async (data: OfferRideFormData) => {
     try {
-      // This would be replaced with actual API call
-      console.log('Ride offer data:', data)
+      // Combine date and time
+      const departureDateTime = new Date(`${data.departure_date}T${data.departure_time}`)
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      await createRide({
+        departure_location: data.departure_location,
+        destination: data.destination,
+        departure_time: departureDateTime.toISOString(),
+        available_seats: data.available_seats,
+        price_per_seat: data.price_per_seat,
+        is_flexible_price: data.is_flexible_price,
+        description: data.description || null,
+      })
       
       toast({
         title: 'Ride created successfully',
@@ -118,12 +128,11 @@ export default function OfferRidePage() {
         isClosable: true,
       })
       
-      // Reset the stepper to the first step
-      setActiveStep(0)
-    } catch (error) {
+      router.push('/my-rides')
+    } catch (error: any) {
       toast({
         title: 'Failed to create ride',
-        description: error instanceof Error ? error.message : 'An error occurred',
+        description: error.message || 'An error occurred',
         status: 'error',
         duration: 5000,
         isClosable: true,
@@ -140,294 +149,296 @@ export default function OfferRidePage() {
   }
 
   return (
-    <Box minH="100vh" display="flex" flexDirection="column">
-      <Navbar />
-      <Container maxW="container.md" py={8} flex="1">
-        <Stack spacing={8}>
-          <Box>
-            <Heading as="h1" size="xl" mb={2}>
-              Offer a Ride
-            </Heading>
-            <Text color="gray.600">
-              Share your journey and help others while covering your costs
-            </Text>
-          </Box>
-          
-          <Stepper index={activeStep} colorScheme="brand" mb={8}>
-            {steps.map((step, index) => (
-              <Step key={index}>
-                <StepIndicator>
-                  <StepStatus
-                    complete={<StepIcon />}
-                    incomplete={<StepNumber />}
-                    active={<StepNumber />}
-                  />
-                </StepIndicator>
-                <Box flexShrink={0}>
-                  <StepTitle>{step.title}</StepTitle>
-                  <StepDescription>{step.description}</StepDescription>
-                </Box>
-                <StepSeparator />
-              </Step>
-            ))}
-          </Stepper>
-          
-          <Card>
-            <CardHeader>
-              <Heading size="md">
-                {activeStep === 0 && 'Set Your Route'}
-                {activeStep === 1 && 'Ride Details'}
-                {activeStep === 2 && 'Review Your Ride'}
+    <AuthGuard>
+      <Box minH="100vh" display="flex" flexDirection="column">
+        <Navbar />
+        <Container maxW="container.md" py={8} flex="1">
+          <Stack spacing={8}>
+            <Box>
+              <Heading as="h1" size="xl" mb={2}>
+                Offer a Ride
               </Heading>
-            </CardHeader>
-            <CardBody>
-              <form onSubmit={handleSubmit(onSubmit)}>
-                {activeStep === 0 && (
-                  <Stack spacing={6}>
-                    <FormControl isInvalid={!!errors.departureLocation}>
-                      <FormLabel>Departure Location</FormLabel>
-                      <InputGroup>
-                        <InputLeftElement pointerEvents="none">
-                          <FaMapMarkerAlt color="gray.300" />
-                        </InputLeftElement>
-                        <Input 
-                          placeholder="Where are you starting from?" 
-                          {...register('departureLocation')}
-                        />
-                      </InputGroup>
-                      <FormErrorMessage>
-                        {errors.departureLocation?.message}
-                      </FormErrorMessage>
-                    </FormControl>
-                    
-                    <FormControl isInvalid={!!errors.destination}>
-                      <FormLabel>Destination</FormLabel>
-                      <InputGroup>
-                        <InputLeftElement pointerEvents="none">
-                          <FaMapMarkerAlt color="gray.300" />
-                        </InputLeftElement>
-                        <Input 
-                          placeholder="Where are you going?" 
-                          {...register('destination')}
-                        />
-                      </InputGroup>
-                      <FormErrorMessage>
-                        {errors.destination?.message}
-                      </FormErrorMessage>
-                    </FormControl>
-                    
-                    <FormControl isInvalid={!!errors.departureDate}>
-                      <FormLabel>Departure Date</FormLabel>
-                      <InputGroup>
-                        <InputLeftElement pointerEvents="none">
-                          <FaCalendarAlt color="gray.300" />
-                        </InputLeftElement>
-                        <Input 
-                          type="date" 
-                          {...register('departureDate')}
-                        />
-                      </InputGroup>
-                      <FormErrorMessage>
-                        {errors.departureDate?.message}
-                      </FormErrorMessage>
-                    </FormControl>
-                    
-                    <FormControl isInvalid={!!errors.departureTime}>
-                      <FormLabel>Departure Time</FormLabel>
-                      <InputGroup>
-                        <InputLeftElement pointerEvents="none">
-                          <FaClock color="gray.300" />
-                        </InputLeftElement>
-                        <Input 
-                          type="time" 
-                          {...register('departureTime')}
-                        />
-                      </InputGroup>
-                      <FormErrorMessage>
-                        {errors.departureTime?.message}
-                      </FormErrorMessage>
-                    </FormControl>
-                  </Stack>
-                )}
-                
-                {activeStep === 1 && (
-                  <Stack spacing={6}>
-                    <FormControl isInvalid={!!errors.availableSeats}>
-                      <FormLabel>Available Seats</FormLabel>
-                      <InputGroup>
-                        <InputLeftElement pointerEvents="none">
-                          <FaUser color="gray.300" />
-                        </InputLeftElement>
-                        <NumberInput 
-                          min={1} 
-                          max={8} 
-                          defaultValue={1}
-                          w="100%"
-                        >
-                          <NumberInputField 
-                            pl="40px"
-                            {...register('availableSeats', { valueAsNumber: true })}
+              <Text color="gray.600">
+                Share your journey and help others while covering your costs
+              </Text>
+            </Box>
+            
+            <Stepper index={activeStep} colorScheme="brand" mb={8}>
+              {steps.map((step, index) => (
+                <Step key={index}>
+                  <StepIndicator>
+                    <StepStatus
+                      complete={<StepIcon />}
+                      incomplete={<StepNumber />}
+                      active={<StepNumber />}
+                    />
+                  </StepIndicator>
+                  <Box flexShrink={0}>
+                    <StepTitle>{step.title}</StepTitle>
+                    <StepDescription>{step.description}</StepDescription>
+                  </Box>
+                  <StepSeparator />
+                </Step>
+              ))}
+            </Stepper>
+            
+            <Card>
+              <CardHeader>
+                <Heading size="md">
+                  {activeStep === 0 && 'Set Your Route'}
+                  {activeStep === 1 && 'Ride Details'}
+                  {activeStep === 2 && 'Review Your Ride'}
+                </Heading>
+              </CardHeader>
+              <CardBody>
+                <form onSubmit={handleSubmit(onSubmit)}>
+                  {activeStep === 0 && (
+                    <Stack spacing={6}>
+                      <FormControl isInvalid={!!errors.departure_location}>
+                        <FormLabel>Departure Location</FormLabel>
+                        <InputGroup>
+                          <InputLeftElement pointerEvents="none">
+                            <FaMapMarkerAlt color="gray.300" />
+                          </InputLeftElement>
+                          <Input 
+                            placeholder="Where are you starting from?" 
+                            {...register('departure_location')}
                           />
-                          <NumberInputStepper>
-                            <NumberIncrementStepper />
-                            <NumberDecrementStepper />
-                          </NumberInputStepper>
-                        </NumberInput>
-                      </InputGroup>
-                      <FormErrorMessage>
-                        {errors.availableSeats?.message}
-                      </FormErrorMessage>
-                    </FormControl>
-                    
-                    <FormControl isInvalid={!!errors.pricePerSeat}>
-                      <FormLabel>Price per Seat</FormLabel>
-                      <InputGroup>
-                        <InputLeftElement pointerEvents="none">
-                          <FaMoneyBillWave color="gray.300" />
-                        </InputLeftElement>
-                        <NumberInput 
-                          min={0} 
-                          defaultValue={50}
-                          w="100%"
-                        >
-                          <NumberInputField 
-                            pl="40px"
-                            {...register('pricePerSeat', { valueAsNumber: true })}
+                        </InputGroup>
+                        <FormErrorMessage>
+                          {errors.departure_location?.message}
+                        </FormErrorMessage>
+                      </FormControl>
+                      
+                      <FormControl isInvalid={!!errors.destination}>
+                        <FormLabel>Destination</FormLabel>
+                        <InputGroup>
+                          <InputLeftElement pointerEvents="none">
+                            <FaMapMarkerAlt color="gray.300" />
+                          </InputLeftElement>
+                          <Input 
+                            placeholder="Where are you going?" 
+                            {...register('destination')}
                           />
-                          <NumberInputStepper>
-                            <NumberIncrementStepper />
-                            <NumberDecrementStepper />
-                          </NumberInputStepper>
-                        </NumberInput>
-                        <InputRightAddon children="ZAR" />
-                      </InputGroup>
-                      <FormErrorMessage>
-                        {errors.pricePerSeat?.message}
-                      </FormErrorMessage>
-                    </FormControl>
-                    
-                    <FormControl display="flex" alignItems="center">
-                      <FormLabel htmlFor="isFlexiblePrice" mb="0">
-                        Flexible Price (Allow passengers to negotiate)
-                      </FormLabel>
-                      <Switch 
-                        id="isFlexiblePrice" 
-                        colorScheme="brand"
-                        {...register('isFlexiblePrice')}
-                      />
-                    </FormControl>
-                    
-                    <FormControl isInvalid={!!errors.description}>
-                      <FormLabel>Description (Optional)</FormLabel>
-                      <Textarea 
-                        placeholder="Add any additional details about your ride..."
-                        {...register('description')}
-                        rows={4}
-                      />
-                      <FormErrorMessage>
-                        {errors.description?.message}
-                      </FormErrorMessage>
-                    </FormControl>
-                  </Stack>
-                )}
-                
-                {activeStep === 2 && (
-                  <Stack spacing={6}>
-                    <Alert status="info" borderRadius="md">
-                      <AlertIcon />
-                      <Box>
-                        <AlertTitle>Almost there!</AlertTitle>
-                        <AlertDescription>
-                          Please review your ride details before submitting.
-                        </AlertDescription>
-                      </Box>
-                    </Alert>
-                    
-                    <Box>
-                      <Text fontWeight="bold" mb={2}>Route</Text>
-                      <Card variant="outline">
-                        <CardBody>
-                          <Stack spacing={3}>
-                            <Flex>
-                              <Box w="120px" fontWeight="medium">From:</Box>
-                              <Text>{watchedValues.departureLocation}</Text>
-                            </Flex>
-                            <Flex>
-                              <Box w="120px" fontWeight="medium">To:</Box>
-                              <Text>{watchedValues.destination}</Text>
-                            </Flex>
-                            <Flex>
-                              <Box w="120px" fontWeight="medium">Date:</Box>
-                              <Text>{watchedValues.departureDate}</Text>
-                            </Flex>
-                            <Flex>
-                              <Box w="120px" fontWeight="medium">Time:</Box>
-                              <Text>{watchedValues.departureTime}</Text>
-                            </Flex>
-                          </Stack>
-                        </CardBody>
-                      </Card>
-                    </Box>
-                    
-                    <Box>
-                      <Text fontWeight="bold" mb={2}>Details</Text>
-                      <Card variant="outline">
-                        <CardBody>
-                          <Stack spacing={3}>
-                            <Flex>
-                              <Box w="120px" fontWeight="medium">Seats:</Box>
-                              <Text>{watchedValues.availableSeats}</Text>
-                            </Flex>
-                            <Flex>
-                              <Box w="120px" fontWeight="medium">Price:</Box>
-                              <Text>R{watchedValues.pricePerSeat} per seat</Text>
-                            </Flex>
-                            <Flex>
-                              <Box w="120px" fontWeight="medium">Flexible:</Box>
-                              <Text>{watchedValues.isFlexiblePrice ? 'Yes' : 'No'}</Text>
-                            </Flex>
-                            {watchedValues.description && (
-                              <Flex>
-                                <Box w="120px" fontWeight="medium">Notes:</Box>
-                                <Text>{watchedValues.description}</Text>
-                              </Flex>
-                            )}
-                          </Stack>
-                        </CardBody>
-                      </Card>
-                    </Box>
-                  </Stack>
-                )}
-                
-                <Flex justify="space-between" mt={8}>
-                  {activeStep > 0 ? (
-                    <Button onClick={prevStep} variant="outline">
-                      Previous
-                    </Button>
-                  ) : (
-                    <Box /> // Empty box for spacing
+                        </InputGroup>
+                        <FormErrorMessage>
+                          {errors.destination?.message}
+                        </FormErrorMessage>
+                      </FormControl>
+                      
+                      <FormControl isInvalid={!!errors.departure_date}>
+                        <FormLabel>Departure Date</FormLabel>
+                        <InputGroup>
+                          <InputLeftElement pointerEvents="none">
+                            <FaCalendarAlt color="gray.300" />
+                          </InputLeftElement>
+                          <Input 
+                            type="date" 
+                            {...register('departure_date')}
+                          />
+                        </InputGroup>
+                        <FormErrorMessage>
+                          {errors.departure_date?.message}
+                        </FormErrorMessage>
+                      </FormControl>
+                      
+                      <FormControl isInvalid={!!errors.departure_time}>
+                        <FormLabel>Departure Time</FormLabel>
+                        <InputGroup>
+                          <InputLeftElement pointerEvents="none">
+                            <FaClock color="gray.300" />
+                          </InputLeftElement>
+                          <Input 
+                            type="time" 
+                            {...register('departure_time')}
+                          />
+                        </InputGroup>
+                        <FormErrorMessage>
+                          {errors.departure_time?.message}
+                        </FormErrorMessage>
+                      </FormControl>
+                    </Stack>
                   )}
                   
-                  {activeStep < steps.length - 1 ? (
-                    <Button colorScheme="brand" onClick={nextStep}>
-                      Next
-                    </Button>
-                  ) : (
-                    <Button 
-                      colorScheme="brand" 
-                      type="submit"
-                      isLoading={isSubmitting}
-                    >
-                      Create Ride
-                    </Button>
+                  {activeStep === 1 && (
+                    <Stack spacing={6}>
+                      <FormControl isInvalid={!!errors.available_seats}>
+                        <FormLabel>Available Seats</FormLabel>
+                        <InputGroup>
+                          <InputLeftElement pointerEvents="none">
+                            <FaUser color="gray.300" />
+                          </InputLeftElement>
+                          <NumberInput 
+                            min={1} 
+                            max={8} 
+                            defaultValue={1}
+                            w="100%"
+                          >
+                            <NumberInputField 
+                              pl="40px"
+                              {...register('available_seats', { valueAsNumber: true })}
+                            />
+                            <NumberInputStepper>
+                              <NumberIncrementStepper />
+                              <NumberDecrementStepper />
+                            </NumberInputStepper>
+                          </NumberInput>
+                        </InputGroup>
+                        <FormErrorMessage>
+                          {errors.available_seats?.message}
+                        </FormErrorMessage>
+                      </FormControl>
+                      
+                      <FormControl isInvalid={!!errors.price_per_seat}>
+                        <FormLabel>Price per Seat</FormLabel>
+                        <InputGroup>
+                          <InputLeftElement pointerEvents="none">
+                            <FaMoneyBillWave color="gray.300" />
+                          </InputLeftElement>
+                          <NumberInput 
+                            min={0} 
+                            defaultValue={50}
+                            w="100%"
+                          >
+                            <NumberInputField 
+                              pl="40px"
+                              {...register('price_per_seat', { valueAsNumber: true })}
+                            />
+                            <NumberInputStepper>
+                              <NumberIncrementStepper />
+                              <NumberDecrementStepper />
+                            </NumberInputStepper>
+                          </NumberInput>
+                          <InputRightAddon children="ZAR" />
+                        </InputGroup>
+                        <FormErrorMessage>
+                          {errors.price_per_seat?.message}
+                        </FormErrorMessage>
+                      </FormControl>
+                      
+                      <FormControl display="flex" alignItems="center">
+                        <FormLabel htmlFor="is_flexible_price" mb="0">
+                          Flexible Price (Allow passengers to negotiate)
+                        </FormLabel>
+                        <Switch 
+                          id="is_flexible_price" 
+                          colorScheme="brand"
+                          {...register('is_flexible_price')}
+                        />
+                      </FormControl>
+                      
+                      <FormControl isInvalid={!!errors.description}>
+                        <FormLabel>Description (Optional)</FormLabel>
+                        <Textarea 
+                          placeholder="Add any additional details about your ride..."
+                          {...register('description')}
+                          rows={4}
+                        />
+                        <FormErrorMessage>
+                          {errors.description?.message}
+                        </FormErrorMessage>
+                      </FormControl>
+                    </Stack>
                   )}
-                </Flex>
-              </form>
-            </CardBody>
-          </Card>
-        </Stack>
-      </Container>
-      <Footer />
-    </Box>
+                  
+                  {activeStep === 2 && (
+                    <Stack spacing={6}>
+                      <Alert status="info" borderRadius="md">
+                        <AlertIcon />
+                        <Box>
+                          <AlertTitle>Almost there!</AlertTitle>
+                          <AlertDescription>
+                            Please review your ride details before submitting.
+                          </AlertDescription>
+                        </Box>
+                      </Alert>
+                      
+                      <Box>
+                        <Text fontWeight="bold" mb={2}>Route</Text>
+                        <Card variant="outline">
+                          <CardBody>
+                            <Stack spacing={3}>
+                              <Flex>
+                                <Box w="120px" fontWeight="medium">From:</Box>
+                                <Text>{watchedValues.departure_location}</Text>
+                              </Flex>
+                              <Flex>
+                                <Box w="120px" fontWeight="medium">To:</Box>
+                                <Text>{watchedValues.destination}</Text>
+                              </Flex>
+                              <Flex>
+                                <Box w="120px" fontWeight="medium">Date:</Box>
+                                <Text>{watchedValues.departure_date}</Text>
+                              </Flex>
+                              <Flex>
+                                <Box w="120px" fontWeight="medium">Time:</Box>
+                                <Text>{watchedValues.departure_time}</Text>
+                              </Flex>
+                            </Stack>
+                          </CardBody>
+                        </Card>
+                      </Box>
+                      
+                      <Box>
+                        <Text fontWeight="bold" mb={2}>Details</Text>
+                        <Card variant="outline">
+                          <CardBody>
+                            <Stack spacing={3}>
+                              <Flex>
+                                <Box w="120px" fontWeight="medium">Seats:</Box>
+                                <Text>{watchedValues.available_seats}</Text>
+                              </Flex>
+                              <Flex>
+                                <Box w="120px" fontWeight="medium">Price:</Box>
+                                <Text>R{watchedValues.price_per_seat} per seat</Text>
+                              </Flex>
+                              <Flex>
+                                <Box w="120px" fontWeight="medium">Flexible:</Box>
+                                <Text>{watchedValues.is_flexible_price ? 'Yes' : 'No'}</Text>
+                              </Flex>
+                              {watchedValues.description && (
+                                <Flex>
+                                  <Box w="120px" fontWeight="medium">Notes:</Box>
+                                  <Text>{watchedValues.description}</Text>
+                                </Flex>
+                              )}
+                            </Stack>
+                          </CardBody>
+                        </Card>
+                      </Box>
+                    </Stack>
+                  )}
+                  
+                  <Flex justify="space-between" mt={8}>
+                    {activeStep > 0 ? (
+                      <Button onClick={prevStep} variant="outline">
+                        Previous
+                      </Button>
+                    ) : (
+                      <Box /> // Empty box for spacing
+                    )}
+                    
+                    {activeStep < steps.length - 1 ? (
+                      <Button colorScheme="brand" onClick={nextStep}>
+                        Next
+                      </Button>
+                    ) : (
+                      <Button 
+                        colorScheme="brand" 
+                        type="submit"
+                        isLoading={isSubmitting}
+                      >
+                        Create Ride
+                      </Button>
+                    )}
+                  </Flex>
+                </form>
+              </CardBody>
+            </Card>
+          </Stack>
+        </Container>
+        <Footer />
+      </Box>
+    </AuthGuard>
   )
 }

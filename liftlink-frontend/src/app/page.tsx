@@ -15,11 +15,14 @@ import {
   useColorModeValue
 } from "@chakra-ui/react";
 import { FaCar, FaMapMarkerAlt, FaComments, FaShieldAlt, FaMoneyBillWave } from "react-icons/fa";
+import Link from "next/link";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
+import { useAuthStore } from "@/store/authStore";
 
 export default function Home() {
   const textColor = useColorModeValue('gray.700', 'gray.200');
+  const { user } = useAuthStore();
 
   return (
     <Box>
@@ -53,20 +56,24 @@ export default function Home() {
               </Text>
               <Flex gap={4}>
                 <Button
+                  as={Link}
+                  href={user ? "/find-ride" : "/register"}
                   size="lg"
                   colorScheme="white"
                   variant="outline"
                   _hover={{ bg: "whiteAlpha.200" }}
                 >
-                  Find a Ride
+                  {user ? "Find a Ride" : "Get Started"}
                 </Button>
                 <Button
+                  as={Link}
+                  href={user ? "/offer-ride" : "/login"}
                   size="lg"
                   bg="white"
                   color="brand.500"
                   _hover={{ bg: "gray.100" }}
                 >
-                  Offer a Ride
+                  {user ? "Offer a Ride" : "Sign In"}
                 </Button>
               </Flex>
             </Box>
