@@ -419,7 +419,7 @@ export default function OfferRidePage() {
                     )}
                     
                     {activeStep < steps.length - 1 ? (
-                      <Button colorScheme="brand" onClick={nextStep}>
+                      <Button colorScheme="brand\" onClick={nextStep}>
                         Next
                       </Button>
                     ) : (

@@ -331,7 +331,7 @@ export default function FindRidePage() {
                           </HStack>
                           <Text fontWeight="bold" fontSize="xl" color="brand.500">
                             R{ride.price_per_seat}
-                            {ride.is_flexible_price && <Text as="span" fontSize="xs"> (Negotiable)</Text>}
+                            {ride.is_flexible_price && <Text as="span\" fontSize="xs"> (Negotiable)</Text>}
                           </Text>
                         </Flex>
                       </CardHeader>
