@@ -1,0 +1,287 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgis/postgis:15-3.3
+    container_name: liftlink-postgres
+    environment:
+      POSTGRES_DB: liftlink
+      POSTGRES_USER: liftlink_user
+      POSTGRES_PASSWORD: liftlink_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init:/docker-entrypoint-initdb.d
+    networks:
+      - liftlink-network
+    restart: unless-stopped
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: liftlink-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - liftlink-network
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+
+  # Backend API
+  backend:
+    build:
+      context: ./liftlink-backend
+      dockerfile: Dockerfile
+    container_name: liftlink-backend
+    environment:
+      NODE_ENV: development
+      PORT: 3001
+      DATABASE_URL: postgresql://liftlink_user:liftlink_password@postgres:5432/liftlink
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: your-super-secret-jwt-key-change-in-production
+      JWT_REFRESH_SECRET: your-super-secret-refresh-key-change-in-production
+      FRONTEND_URL: http://localhost:3000
+      STRIPE_SECRET_KEY: sk_test_your_stripe_secret_key
+      STRIPE_WEBHOOK_SECRET: whsec_your_webhook_secret
+      TWILIO_ACCOUNT_SID: your_twilio_account_sid
+      TWILIO_AUTH_TOKEN: your_twilio_auth_token
+      GOOGLE_MAPS_API_KEY: your_google_maps_api_key
+      EMAIL_HOST: smtp.gmail.com
+      EMAIL_PORT: 587
+      EMAIL_USER: your-email@gmail.com
+      EMAIL_PASS: your-app-password
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./liftlink-backend:/app
+      - /app/node_modules
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - liftlink-network
+    restart: unless-stopped
+    command: npm run dev
+
+  # Frontend Application
+  frontend:
+    build:
+      context: ./liftlink-frontend
+      dockerfile: Dockerfile
+    container_name: liftlink-frontend
+    environment:
+      NODE_ENV: development
+      NEXT_PUBLIC_API_URL: http://localhost:3001/api
+      NEXT_PUBLIC_SOCKET_URL: http://localhost:3001
+      NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: your_google_maps_api_key
+      NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: pk_test_your_stripe_publishable_key
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./liftlink-frontend:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      - backend
+    networks:
+      - liftlink-network
+    restart: unless-stopped
+    command: npm run dev
+
+  # Real-time Services
+  realtime:
+    build:
+      context: ./liftlink-realtime
+      dockerfile: Dockerfile
+    container_name: liftlink-realtime
+    environment:
+      NODE_ENV: development
+      PORT: 3002
+      REDIS_URL: redis://redis:6379
+      DATABASE_URL: postgresql://liftlink_user:liftlink_password@postgres:5432/liftlink
+    ports:
+      - "3002:3002"
+    volumes:
+      - ./liftlink-realtime:/app
+      - /app/node_modules
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - liftlink-network
+    restart: unless-stopped
+    command: npm run dev
+
+  # Payment Services
+  payments:
+    build:
+      context: ./liftlink-payments
+      dockerfile: Dockerfile
+    container_name: liftlink-payments
+    environment:
+      NODE_ENV: development
+      PORT: 3003
+      REDIS_URL: redis://redis:6379
+      DATABASE_URL: postgresql://liftlink_user:liftlink_password@postgres:5432/liftlink
+      STRIPE_SECRET_KEY: sk_test_your_stripe_secret_key
+      STRIPE_WEBHOOK_SECRET: whsec_your_webhook_secret
+      PAYPAL_CLIENT_ID: your_paypal_client_id
+      PAYPAL_CLIENT_SECRET: your_paypal_client_secret
+    ports:
+      - "3003:3003"
+    volumes:
+      - ./liftlink-payments:/app
+      - /app/node_modules
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - liftlink-network
+    restart: unless-stopped
+    command: npm run dev
+
+  # Geolocation Services
+  geolocation:
+    build:
+      context: ./liftlink-geolocation
+      dockerfile: Dockerfile
+    container_name: liftlink-geolocation
+    environment:
+      NODE_ENV: development
+      PORT: 3004
+      REDIS_URL: redis://redis:6379
+      GOOGLE_MAPS_API_KEY: your_google_maps_api_key
+      MAPBOX_ACCESS_TOKEN: your_mapbox_access_token
+    ports:
+      - "3004:3004"
+    volumes:
+      - ./liftlink-geolocation:/app
+      - /app/node_modules
+    depends_on:
+      - redis
+    networks:
+      - liftlink-network
+    restart: unless-stopped
+    command: npm run dev
+
+  # Notification Services
+  notifications:
+    build:
+      context: ./liftlink-notifications
+      dockerfile: Dockerfile
+    container_name: liftlink-notifications
+    environment:
+      NODE_ENV: development
+      PORT: 3005
+      REDIS_URL: redis://redis:6379
+      DATABASE_URL: postgresql://liftlink_user:liftlink_password@postgres:5432/liftlink
+      TWILIO_ACCOUNT_SID: your_twilio_account_sid
+      TWILIO_AUTH_TOKEN: your_twilio_auth_token
+      EMAIL_HOST: smtp.gmail.com
+      EMAIL_PORT: 587
+      EMAIL_USER: your-email@gmail.com
+      EMAIL_PASS: your-app-password
+      FIREBASE_SERVER_KEY: your_firebase_server_key
+    ports:
+      - "3005:3005"
+    volumes:
+      - ./liftlink-notifications:/app
+      - /app/node_modules
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - liftlink-network
+    restart: unless-stopped
+    command: npm run dev
+
+  # Admin Dashboard
+  admin:
+    build:
+      context: ./liftlink-admin
+      dockerfile: Dockerfile
+    container_name: liftlink-admin
+    environment:
+      NODE_ENV: development
+      REACT_APP_API_URL: http://localhost:3001/api
+      REACT_APP_SOCKET_URL: http://localhost:3001
+    ports:
+      - "3006:3000"
+    volumes:
+      - ./liftlink-admin:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    networks:
+      - liftlink-network
+    restart: unless-stopped
+    command: npm start
+
+  # Nginx Reverse Proxy (Production)
+  nginx:
+    image: nginx:alpine
+    container_name: liftlink-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deployment/nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./deployment/nginx/ssl:/etc/nginx/ssl
+    depends_on:
+      - frontend
+      - backend
+      - admin
+    networks:
+      - liftlink-network
+    restart: unless-stopped
+    profiles:
+      - production
+
+  # Monitoring with Prometheus
+  prometheus:
+    image: prom/prometheus
+    container_name: liftlink-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./deployment/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    networks:
+      - liftlink-network
+    restart: unless-stopped
+    profiles:
+      - monitoring
+
+  # Grafana for Dashboards
+  grafana:
+    image: grafana/grafana
+    container_name: liftlink-grafana
+    ports:
+      - "3007:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin123
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./deployment/monitoring/grafana:/etc/grafana/provisioning
+    depends_on:
+      - prometheus
+    networks:
+      - liftlink-network
+    restart: unless-stopped
+    profiles:
+      - monitoring
+
+volumes:
+  postgres_data:
+  redis_data:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  liftlink-network:
+    driver: bridge
