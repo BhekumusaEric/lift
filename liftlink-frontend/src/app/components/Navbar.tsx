@@ -7,29 +7,28 @@ import {
   IconButton,
   Button,
   Stack,
-  Collapse,
+
   Icon,
   Link,
   Popover,
   PopoverTrigger,
   PopoverContent,
-  useColorModeValue,
+
   useBreakpointValue,
   useDisclosure,
   Menu,
-  MenuButton,
-  MenuList,
+
   MenuItem,
-  MenuDivider,
+
   Avatar,
   HStack,
 } from '@chakra-ui/react';
 import {
-  HamburgerIcon,
-  CloseIcon,
-  ChevronDownIcon,
-  ChevronRightIcon
-} from '@chakra-ui/icons';
+  FaBars as HamburgerIcon,
+  FaTimes as CloseIcon,
+  FaChevronDown as ChevronDownIcon,
+  FaChevronRight as ChevronRightIcon,
+} from 'react-icons/fa';
 import { FaUser, FaSignOutAlt } from 'react-icons/fa';
 import NextLink from 'next/link';
 import { useAuthStore } from '@/store/authStore';
@@ -49,14 +48,14 @@ export default function Navbar() {
   return (
     <Box>
       <Flex
-        bg={useColorModeValue('white', 'gray.800')}
-        color={useColorModeValue('gray.600', 'white')}
+        bg={'white'}
+        color={'gray.600'}
         minH={'60px'}
         py={{ base: 2 }}
         px={{ base: 4 }}
         borderBottom={1}
         borderStyle={'solid'}
-        borderColor={useColorModeValue('gray.200', 'gray.900')}
+        borderColor={'gray.200'}
         align={'center'}>
         <Flex
           flex={{ base: 1, md: 'auto' }}
@@ -75,7 +74,7 @@ export default function Navbar() {
           <Text
             textAlign={useBreakpointValue({ base: 'center', md: 'left' })}
             fontFamily={'heading'}
-            color={useColorModeValue('brand.500', 'white')}
+            color={'#0080ff'}
             fontWeight="bold"
             fontSize="xl">
             <NextLink href={user ? "/dashboard" : "/"} passHref>
@@ -94,35 +93,18 @@ export default function Navbar() {
           direction={'row'}
           spacing={6}>
           {user && profile ? (
-            <Menu>
-              <MenuButton as={Button} variant="ghost" cursor="pointer">
-                <HStack>
-                  <Avatar 
-                    size="sm" 
-                    name={`${profile.first_name} ${profile.last_name}`}
-                  />
-                  <Text display={{ base: 'none', md: 'block' }}>
-                    {profile.first_name}
-                  </Text>
-                  <ChevronDownIcon />
-                </HStack>
-              </MenuButton>
-              <MenuList>
-                <MenuItem as={NextLink} href="/dashboard" icon={<FaUser />}>
-                  Dashboard
-                </MenuItem>
-                <MenuItem as={NextLink} href="/profile" icon={<FaUser />}>
-                  Profile
-                </MenuItem>
-                <MenuItem as={NextLink} href="/my-rides">
-                  My Rides
-                </MenuItem>
-                <MenuDivider />
-                <MenuItem icon={<FaSignOutAlt />} onClick={handleSignOut}>
-                  Sign Out
-                </MenuItem>
-              </MenuList>
-            </Menu>
+            <HStack>
+              <Avatar
+                size="sm"
+                name={`${profile.first_name} ${profile.last_name}`}
+              />
+              <Text display={{ base: 'none', md: 'block' }}>
+                {profile.first_name}
+              </Text>
+              <Button variant="ghost" onClick={handleSignOut}>
+                Sign Out
+              </Button>
+            </HStack>
           ) : (
             <>
               <Button
@@ -139,10 +121,10 @@ export default function Navbar() {
                 fontSize={'sm'}
                 fontWeight={600}
                 color={'white'}
-                bg={'brand.500'}
+                bg={'#0080ff'}
                 href={'/register'}
                 _hover={{
-                  bg: 'brand.400',
+                  bg: '#0066cc',
                 }}>
                 Sign Up
               </Button>
@@ -151,17 +133,15 @@ export default function Navbar() {
         </Stack>
       </Flex>
 
-      <Collapse in={isOpen} animateOpacity>
-        <MobileNav />
-      </Collapse>
+      {isOpen && <MobileNav />}
     </Box>
   );
 }
 
 const DesktopNav = () => {
-  const linkColor = useColorModeValue('gray.600', 'gray.200');
-  const linkHoverColor = useColorModeValue('brand.500', 'white');
-  const popoverContentBgColor = useColorModeValue('white', 'gray.800');
+  const linkColor = 'gray.600';
+  const linkHoverColor = '#0080ff';
+  const popoverContentBgColor = 'white';
   const { user } = useAuthStore();
 
   const navItems = user ? AUTHENTICATED_NAV_ITEMS : PUBLIC_NAV_ITEMS;
@@ -218,12 +198,12 @@ const DesktopSubNav = ({ label, href, subLabel }: NavItem) => {
       display={'block'}
       p={2}
       rounded={'md'}
-      _hover={{ bg: useColorModeValue('brand.50', 'gray.900') }}>
+      _hover={{ bg: '#e6f7ff' }}>
       <Stack direction={'row'} align={'center'}>
         <Box>
           <Text
             transition={'all .3s ease'}
-            _groupHover={{ color: 'brand.500' }}
+            _groupHover={{ color: '#0080ff' }}
             fontWeight={500}>
             {label}
           </Text>
@@ -237,7 +217,7 @@ const DesktopSubNav = ({ label, href, subLabel }: NavItem) => {
           justify={'flex-end'}
           align={'center'}
           flex={1}>
-          <Icon color={'brand.500'} w={5} h={5} as={ChevronRightIcon} />
+          <Icon color={'#0080ff'} w={5} h={5} as={ChevronRightIcon} />
         </Flex>
       </Stack>
     </Link>
@@ -250,7 +230,7 @@ const MobileNav = () => {
 
   return (
     <Stack
-      bg={useColorModeValue('white', 'gray.800')}
+      bg={'white'}
       p={4}
       display={{ md: 'none' }}>
       {navItems.map((navItem) => (
@@ -276,7 +256,7 @@ const MobileNavItem = ({ label, children, href }: NavItem) => {
         }}>
         <Text
           fontWeight={600}
-          color={useColorModeValue('gray.600', 'gray.200')}>
+          color={'gray.600'}>
           {label}
         </Text>
         {children && (
@@ -290,13 +270,13 @@ const MobileNavItem = ({ label, children, href }: NavItem) => {
         )}
       </Flex>
 
-      <Collapse in={isOpen} animateOpacity style={{ marginTop: '0!important' }}>
+      {isOpen && (
         <Stack
           mt={2}
           pl={4}
           borderLeft={1}
           borderStyle={'solid'}
-          borderColor={useColorModeValue('gray.200', 'gray.700')}
+          borderColor={'gray.200'}
           align={'start'}>
           {children &&
             children.map((child) => (
@@ -305,7 +285,7 @@ const MobileNavItem = ({ label, children, href }: NavItem) => {
               </Link>
             ))}
         </Stack>
-      </Collapse>
+      )}
     </Stack>
   );
 };
