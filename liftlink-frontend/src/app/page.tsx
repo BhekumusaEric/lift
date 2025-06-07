@@ -1,6 +1,5 @@
 'use client'
 
-import Image from "next/image";
 import {
   Box,
   Button,
@@ -8,28 +7,24 @@ import {
   Flex,
   Heading,
   Text,
-  VStack,
-  HStack,
   SimpleGrid,
   Icon,
-  useColorModeValue
 } from "@chakra-ui/react";
 import { FaCar, FaMapMarkerAlt, FaComments, FaShieldAlt, FaMoneyBillWave } from "react-icons/fa";
 import Link from "next/link";
-import Navbar from "./components/Navbar";
-import Footer from "./components/Footer";
-import { useAuthStore } from "@/store/authStore";
+// import Navbar from "./components/Navbar";
+// import Footer from "./components/Footer";
 
 export default function Home() {
-  const textColor = useColorModeValue('gray.700', 'gray.200');
-  const { user } = useAuthStore();
+  const textColor = '#4a5568'; // gray.700 equivalent
+  const user = null; // Temporarily disable auth for now
 
   return (
     <Box>
-      <Navbar />
+      {/* <Navbar /> */}
       {/* Hero Section */}
       <Box
-        bg="brand.500"
+        bg="#0080ff"
         color="white"
         py={20}
         backgroundImage="linear-gradient(135deg, #0080ff 0%, #004d99 100%)"
@@ -70,7 +65,7 @@ export default function Home() {
                   href={user ? "/offer-ride" : "/login"}
                   size="lg"
                   bg="white"
-                  color="brand.500"
+                  color="#0080ff"
                   _hover={{ bg: "gray.100" }}
                 >
                   {user ? "Offer a Ride" : "Sign In"}
@@ -78,13 +73,18 @@ export default function Home() {
               </Flex>
             </Box>
             <Box flex={1} display={{ base: "none", md: "block" }}>
-              <Image
-                src="/placeholder-car.svg"
-                alt="Ride sharing illustration"
-                width={500}
-                height={400}
-                style={{ objectFit: 'contain' }}
-              />
+              <Box
+                width="500px"
+                height="400px"
+                bg="whiteAlpha.200"
+                borderRadius="lg"
+                display="flex"
+                alignItems="center"
+                justifyContent="center"
+                fontSize="6xl"
+              >
+                🚗💨
+              </Box>
             </Box>
           </Flex>
         </Container>
@@ -137,7 +137,7 @@ export default function Home() {
         </Container>
       </Box>
 
-      <Footer />
+      {/* <Footer /> */}
     </Box>
   );
 }
@@ -149,8 +149,8 @@ interface FeatureCardProps {
 }
 
 function FeatureCard({ icon, title, description }: FeatureCardProps) {
-  const bgColor = useColorModeValue('white', 'gray.800');
-  const borderColor = useColorModeValue('gray.200', 'gray.700');
+  const bgColor = 'white';
+  const borderColor = '#e2e8f0'; // gray.200 equivalent
 
   return (
     <Box
@@ -166,7 +166,7 @@ function FeatureCard({ icon, title, description }: FeatureCardProps) {
         boxShadow: "lg"
       }}
     >
-      <Icon as={icon} boxSize={10} color="brand.500" mb={4} />
+      <Icon as={icon} boxSize={10} color="#0080ff" mb={4} />
       <Heading as="h3" size="md" mb={2}>{title}</Heading>
       <Text>{description}</Text>
     </Box>
