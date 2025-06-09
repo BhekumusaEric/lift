@@ -1,0 +1,371 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model for both passengers and drivers
+model User {
+  id                String   @id @default(cuid())
+  email             String   @unique
+  password          String
+  firstName         String
+  lastName          String
+  phoneNumber       String?
+  userType          UserType
+  profileImage      String?
+  dateOfBirth       DateTime?
+  gender            Gender?
+  isEmailVerified   Boolean  @default(false)
+  isPhoneVerified   Boolean  @default(false)
+  status            UserStatus @default(ACTIVE)
+  lastLoginAt       DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  driverProfile     Driver?
+  passengerRides    Ride[]   @relation("PassengerRides")
+  driverRides       Ride[]   @relation("DriverRides")
+  payments          Payment[]
+  reviews           Review[]
+  emergencyContacts EmergencyContact[]
+  notifications     Notification[]
+  supportTickets    SupportTicket[]
+
+  @@map("users")
+}
+
+// Driver-specific information
+model Driver {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  licenseNumber     String   @unique
+  licenseExpiry     DateTime
+  backgroundCheck   BackgroundCheckStatus @default(PENDING)
+  rating            Float    @default(0.0)
+  totalRides        Int      @default(0)
+  totalEarnings     Float    @default(0.0)
+  isOnline          Boolean  @default(false)
+  isAvailable       Boolean  @default(false)
+  currentLocation   Json?    // {lat: number, lng: number}
+  lastLocationUpdate DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  vehicles          Vehicle[]
+  rides             Ride[]   @relation("DriverRides")
+  earnings          Earning[]
+
+  @@map("drivers")
+}
+
+// Vehicle information
+model Vehicle {
+  id            String   @id @default(cuid())
+  driverId      String
+  make          String
+  model         String
+  year          Int
+  color         String
+  licensePlate  String   @unique
+  vehicleType   VehicleType
+  capacity      Int
+  isActive      Boolean  @default(true)
+  insurance     Json?    // Insurance details
+  inspection    Json?    // Inspection details
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  driver        Driver   @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  rides         Ride[]
+
+  @@map("vehicles")
+}
+
+// Ride information
+model Ride {
+  id                String     @id @default(cuid())
+  passengerId       String
+  driverId          String?
+  vehicleId         String?
+  status            RideStatus @default(REQUESTED)
+  pickupLocation    Json       // {address: string, lat: number, lng: number}
+  dropoffLocation   Json       // {address: string, lat: number, lng: number}
+  estimatedDistance Float?     // in kilometers
+  estimatedDuration Int?       // in minutes
+  actualDistance    Float?     // in kilometers
+  actualDuration    Int?       // in minutes
+  fare              Float?
+  commission        Float?     // Platform commission
+  paymentMethod     String?
+  paymentStatus     PaymentStatus @default(PENDING)
+  scheduledAt       DateTime?  // For scheduled rides
+  requestedAt       DateTime   @default(now())
+  acceptedAt        DateTime?
+  startedAt         DateTime?
+  completedAt       DateTime?
+  cancelledAt       DateTime?
+  cancellationReason String?
+  notes             String?
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  // Relations
+  passenger         User       @relation("PassengerRides", fields: [passengerId], references: [id])
+  driver            Driver?    @relation("DriverRides", fields: [driverId], references: [id])
+  vehicle           Vehicle?   @relation(fields: [vehicleId], references: [id])
+  payment           Payment?
+  reviews           Review[]
+  rideTracking      RideTracking[]
+
+  @@map("rides")
+}
+
+// Real-time ride tracking
+model RideTracking {
+  id          String   @id @default(cuid())
+  rideId      String
+  location    Json     // {lat: number, lng: number}
+  speed       Float?   // km/h
+  heading     Float?   // degrees
+  timestamp   DateTime @default(now())
+
+  // Relations
+  ride        Ride     @relation(fields: [rideId], references: [id], onDelete: Cascade)
+
+  @@map("ride_tracking")
+}
+
+// Payment information
+model Payment {
+  id              String        @id @default(cuid())
+  userId          String
+  rideId          String?       @unique
+  amount          Float
+  currency        String        @default("USD")
+  paymentMethod   PaymentMethod
+  paymentProvider String        // stripe, paypal, etc.
+  providerPaymentId String?     // External payment ID
+  status          PaymentStatus @default(PENDING)
+  description     String?
+  metadata        Json?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  // Relations
+  user            User          @relation(fields: [userId], references: [id])
+  ride            Ride?         @relation(fields: [rideId], references: [id])
+
+  @@map("payments")
+}
+
+// Driver earnings tracking
+model Earning {
+  id          String   @id @default(cuid())
+  driverId    String
+  amount      Float
+  commission  Float
+  netAmount   Float
+  date        DateTime @default(now())
+  description String?
+  metadata    Json?
+
+  // Relations
+  driver      Driver   @relation(fields: [driverId], references: [id], onDelete: Cascade)
+
+  @@map("earnings")
+}
+
+// Review and rating system
+model Review {
+  id          String     @id @default(cuid())
+  rideId      String
+  reviewerId  String
+  revieweeId  String?    // Can be null for ride reviews
+  rating      Int        // 1-5 stars
+  comment     String?
+  reviewType  ReviewType
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  // Relations
+  ride        Ride       @relation(fields: [rideId], references: [id], onDelete: Cascade)
+  reviewer    User       @relation(fields: [reviewerId], references: [id])
+
+  @@map("reviews")
+}
+
+// Emergency contacts
+model EmergencyContact {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String
+  phoneNumber String
+  relationship String
+  isPrimary   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("emergency_contacts")
+}
+
+// Notifications
+model Notification {
+  id          String           @id @default(cuid())
+  userId      String
+  title       String
+  message     String
+  type        NotificationType
+  isRead      Boolean          @default(false)
+  data        Json?            // Additional data
+  createdAt   DateTime         @default(now())
+
+  // Relations
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+// Support tickets
+model SupportTicket {
+  id          String        @id @default(cuid())
+  userId      String
+  subject     String
+  description String
+  status      TicketStatus  @default(OPEN)
+  priority    TicketPriority @default(MEDIUM)
+  category    String?
+  assignedTo  String?       // Admin user ID
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  // Relations
+  user        User          @relation(fields: [userId], references: [id])
+  messages    TicketMessage[]
+
+  @@map("support_tickets")
+}
+
+// Support ticket messages
+model TicketMessage {
+  id          String        @id @default(cuid())
+  ticketId    String
+  senderId    String
+  message     String
+  isFromAdmin Boolean       @default(false)
+  createdAt   DateTime      @default(now())
+
+  // Relations
+  ticket      SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@map("ticket_messages")
+}
+
+// Enums
+enum UserType {
+  PASSENGER
+  DRIVER
+  BOTH
+  ADMIN
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+  PREFER_NOT_TO_SAY
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  BANNED
+  PENDING_VERIFICATION
+}
+
+enum BackgroundCheckStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  EXPIRED
+}
+
+enum VehicleType {
+  SEDAN
+  SUV
+  HATCHBACK
+  LUXURY
+  ELECTRIC
+  HYBRID
+}
+
+enum RideStatus {
+  REQUESTED
+  ACCEPTED
+  DRIVER_ARRIVED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  NO_DRIVER_FOUND
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  REFUNDED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  CREDIT_CARD
+  DEBIT_CARD
+  DIGITAL_WALLET
+  CASH
+  BANK_TRANSFER
+}
+
+enum ReviewType {
+  DRIVER_TO_PASSENGER
+  PASSENGER_TO_DRIVER
+  RIDE_EXPERIENCE
+}
+
+enum NotificationType {
+  RIDE_REQUEST
+  RIDE_ACCEPTED
+  RIDE_STARTED
+  RIDE_COMPLETED
+  PAYMENT_RECEIVED
+  PROMOTION
+  SYSTEM_UPDATE
+  EMERGENCY
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
